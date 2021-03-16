@@ -11,7 +11,7 @@ pipeline {
     stage('Deploy') {
       steps{
           sh 'pwd'
-          sh 'cp /var/lib/jenkins/workspace/DSM-WebClient/app/index.html /var/www/html/'
+          sh 'sudo cp ./app/index.html /var/www/html/'
       }
     }
   }
