@@ -11,7 +11,7 @@ pipeline {
     stage('Deploy') {
       steps{
           sh 'pwd'
-          sh 'cp /var/lib/jenkins/workspace/DSM-WebClient/README.md /home/ec2-user/'
+          sh 'cp /var/lib/jenkins/workspace/DSM-WebClient/app/index.html /var/www/html/'
       }
     }
   }
