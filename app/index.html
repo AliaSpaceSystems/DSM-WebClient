@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- Use correct character set. -->
+    <meta charset="utf-8" />
+    <!-- Tell IE to use the latest, best version. -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no"
+    />
+    <title>Hello World!</title>
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.79.1/Build/Cesium/Cesium.js"></script>
+    <style>
+      @import url(https://cesium.com/downloads/cesiumjs/releases/1.79.1/Build/Cesium/Widgets/widgets.css);
+      html,
+      body,
+      #cesiumContainer {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+
+      .cesium-viewer-timelineContainer {
+        visibility: hidden;
+      }
+
+      .cesium-viewer-animationContainer {
+        visibility: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="cesiumContainer"></div>
+    <script>
+	var viewer = new Cesium.Viewer('cesiumContainer', {
+	    terrainExaggeration: 1.0
+	});
+
+	var terrainProvider = new Cesium.CesiumTerrainProvider({
+	    //url: 'http://localhost:9000/tilesets/tiles'
+            url: 'http://eo4africa.alia-space.com/cts'
+
+	});
+	viewer.scene.terrainProvider = terrainProvider;
+        viewer.timeline = false;
+        viewer.animation = false;
+        var img = document.createElement("img");
+        img.src =
+          "./Logo_EO4Africa.png";
+        viewer.container.appendChild(img);
+
+        var img_alia = document.createElement("img");
+        img_alia.src =
+          "./logo_alia.png";
+        viewer.container.appendChild(img_alia);
+
+        var rotation = 0 + "deg";
+        var topOffset = 0;
+        var leftOffset = 0;
+
+        //Position overlay with CSS styling
+        img.style.width = "80px";
+        img.style.position = "absolute";
+        img.style.top = "calc(0% + " + topOffset + "px)";
+        img.style.left = "calc(0% + " + leftOffset + "px)";
+        img.style["pointer-events"] = "none";
+        img.style["-ms-transform"] = "rotate(" + rotation + ")"; /* IE 9 */
+        img.style["-webkit-transform"] =
+          "rotate(" + rotation + ")"; /* Chrome, Safari, Opera */
+        img.style.transform = "rotate(" + rotation + ")";
+        
+        //Position overlay with CSS styling
+        img_alia.style.width = "80px";
+        img_alia.style.position = "absolute";
+        img_alia.style.top = "calc(0% + " + topOffset + "px)";
+        img_alia.style.left = "calc(0% + " + "90px)";
+        img_alia.style["pointer-events"] = "none";
+        img_alia.style["-ms-transform"] = "rotate(" + rotation + ")"; /* IE 9 */
+        img_alia.style["-webkit-transform"] =
+          "rotate(" + rotation + ")"; /* Chrome, Safari, Opera */
+        img_alia.style.transform = "rotate(" + rotation + ")";
+    </script>
+  </body>
+</html>
