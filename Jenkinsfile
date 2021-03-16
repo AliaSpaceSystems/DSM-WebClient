@@ -11,7 +11,7 @@ pipeline {
     stage('Deploy') {
       steps{
           sh 'pwd'
-          sh 'sudo cp ./app/index.html /var/www/html/'
+          sh 'cp ./app/index.html /var/www/html/'
       }
     }
   }
