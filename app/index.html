@@ -41,10 +41,7 @@
 	});
 
 	var terrainProvider = new Cesium.CesiumTerrainProvider({
-	    //url: 'http://localhost:9000/tilesets/tiles'
-            url: 'http://eo4africa.alia-space.com/cts',
-            credit: 'Copernicus DEM processed by Alia Space'
-
+	    url: 'http://eo4africa.alia-space.com/cts'
 	});
 	viewer.scene.terrainProvider = terrainProvider;
         viewer.timeline = false;
