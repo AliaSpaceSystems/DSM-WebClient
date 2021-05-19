@@ -13,71 +13,528 @@
     <title>Hello DSM World!</title>
     <script src="https://cesium.com/downloads/cesiumjs/releases/1.79.1/Build/Cesium/Cesium.js"></script>
     <style>
-      @import url(https://cesium.com/downloads/cesiumjs/releases/1.79.1/Build/Cesium/Widgets/widgets.css);
-      html,
-      body,
-      #cesiumContainer {
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
+    @import url(https://sandcastle.cesium.com/templates/bucket.css);
+
+      #toolbar {
+        background: rgba(42, 42, 42, 0.7);
+        padding: 4px;
+        border-radius: 4px;
       }
 
-      .cesium-viewer-timelineContainer {
-        visibility: hidden;
+      #toolbar input {
+        vertical-align: middle;
+        padding-top: 2px;
+        padding-bottom: 2px;
       }
 
-      .cesium-viewer-animationContainer {
-        visibility: hidden;
+      #toolbar table tr {
+        transform: translateY(0);
+        transition: transform 0.4s ease-out;
+      }
+
+      #toolbar table tr.up {
+        transform: translateY(33px);
+        transition: none;
+      }
+
+      #toolbar table tr.down {
+        transform: translateY(-33px);
+        transition: none;
       }
     </style>
   </head>
   <body>
-    <div id="cesiumContainer"></div>
+    <div id="cesiumContainer" class="fullSize"></div>
+    <div id="loadingOverlay"><h1>Loading...</h1></div>
+    <div id="toolbar">
+    <button id='button' onclick="hide_controls()">Hide</button>
+      <table id='controls'>
+        <tbody data-bind="foreach: layers">
+          <tr data-bind="css: { up: $parent.upLayer === $data, down: $parent.downLayer === $data }">
+            <td><input type="checkbox" data-bind="checked: show"></td>
+            <td>
+              <span data-bind="text: name, visible: !$parent.isSelectableLayer($data)"></span>
+              <select data-bind="visible: $parent.isSelectableLayer($data), options: $parent.baseLayers, optionsText: 'name', value: $parent.selectedLayer"></select>
+            </td>
+            <td>
+              <input type="range" min="0" max="1" step="0.01" data-bind="value: alpha, valueUpdate: 'input'">
+            </td>
+            <td>
+              <button type="button" class="cesium-button" data-bind="click: function() { $parent.raise($data, $index()); }, visible: $parent.canRaise($index())">
+                ▲
+              </button>
+            </td>
+            <td>
+              <button type="button" class="cesium-button" data-bind="click: function() { $parent.lower($data, $index()); }, visible: $parent.canLower($index())">
+                ▼
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <table id='controls2'>
+        <tbody>
+          <tr>
+            <td><input id="selTer" type="checkbox" checked onclick="selTer()">DSM Africa QMesh (SH)</td>
+          </tr>
+          <tr>
+            <td><input id="selTerAfr" type="checkbox" onclick="selTer()">DSM Africa RMesh (SH)</td>
+          </tr>
+          <tr>
+            <td><input id="selBui" type="checkbox" onclick="selBui()">Buildings (ION)</td>
+          </tr>
+          <tr>
+            <td>
+              <div>Height</div>
+                <input type="range" min="-100.0" max="100.0" step="1" data-bind="value: height, valueUpdate: 'input'">
+                <input type="text" size="5" data-bind="value: height">
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <div size="30" >Coordinates</div>
+                <input type="text"  data-bind="value: coords">
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <div>Camera</div>
+                <input type="text" id="camera_coords" size="20" data-bind="value: camera">
+              </div>
+            </td>
+          </tr>
+      </tbody>
+     </table>
     <script>
-	var viewer = new Cesium.Viewer('cesiumContainer', {
-	    terrainExaggeration: 1.0
+Cesium.Ion.defaultAccessToken = 'yourToken'
+var extent = Cesium.Rectangle.fromDegrees(4.4613, -3.1262, 29.1701, 13.6510);
+Cesium.Camera.DEFAULT_VIEW_RECTANGLE = extent;
+Cesium.Camera.DEFAULT_VIEW_FACTOR = 1;
+
+var viewer = new Cesium.Viewer("cesiumContainer", {
+  baseLayerPicker: false,
+});
+var ellipsoidTerrainProvider = new Cesium.EllipsoidTerrainProvider();
+dsmTerrainProvider = new Cesium.CesiumTerrainProvider({
+	    url: 'http://51.91.137.107:8080/tiles-qm'
 	});
 
-	var terrainProvider = new Cesium.CesiumTerrainProvider({
-	    url: 'http://dsm.alia-space.com/cts'
+dsmAfrTerrainProvider = new Cesium.CesiumTerrainProvider({
+	    url: 'http://51.91.137.107:8080/tiles-rm'
 	});
-	viewer.scene.terrainProvider = terrainProvider;
-        viewer.timeline = false;
-        viewer.animation = false;
-        //var img = document.createElement("img");
-        //img.src = "./Logo_EO4Africa.png";
-        //viewer.container.appendChild(img);
+viewer.scene.terrainProvider = dsmTerrainProvider
+var camera=viewer.scene.camera;
+
+
+viewer.animation.container.style.visibility = 'hidden';
+viewer.timeline.container.style.visibility = 'hidden';
+viewer.forceResize();
+viewer.scene.globe.depthTestAgainstTerrain = true;
 
         var img_alia = document.createElement("img");
-        img_alia.src = "./logo_alia.png";
+        img_alia.src = "tiles-rm/logo_alia.png";
         viewer.container.appendChild(img_alia);
 
         var rotation = 0 + "deg";
-        var topOffset = 0;
-        var leftOffset = 0;
-
-        //Position overlay with CSS styling
-        //img.style.width = "80px";
-        //img.style.position = "absolute";
-        //img.style.top = "calc(0% + " + topOffset + "px)";
-        //img.style.left = "calc(0% + " + leftOffset + "px)";
-        //img.style["pointer-events"] = "none";
-        //img.style["-ms-transform"] = "rotate(" + rotation + ")"; /* IE 9 */
-        //img.style["-webkit-transform"] = "rotate(" + rotation + ")"; /* Chrome, Safari, Opera */
-        //img.style.transform = "rotate(" + rotation + ")";
+        var bottomOffset = 5;
+        var rightOffset = 50;
         
         //Position overlay with CSS styling
         img_alia.style.width = "120px";
         img_alia.style.position = "absolute";
-        img_alia.style.top = "calc(0% + " + topOffset + "px)";
-        img_alia.style.left = "calc(0% + " + leftOffset + "px)";
+        img_alia.style.bottom = "calc(0% + " + bottomOffset + "px)";
+        img_alia.style.right = "calc(0% + " + rightOffset + "px)";
         img_alia.style["pointer-events"] = "none";
         img_alia.style["-ms-transform"] = "rotate(" + rotation + ")"; /* IE 9 */
         img_alia.style["-webkit-transform"] =
           "rotate(" + rotation + ")"; /* Chrome, Safari, Opera */
         img_alia.style.transform = "rotate(" + rotation + ")";
+
+var imageryLayers = viewer.imageryLayers;
+
+var viewModel = {
+  layers: [],
+  baseLayers: [],
+  height: 0,
+  coords: "NA",
+  camera: "NA",
+  upLayer: null,
+  downLayer: null,
+  selectedLayer: null,
+  isSelectableLayer: function (layer) {
+    return this.baseLayers.indexOf(layer) >= 0;
+  },
+  raise: function (layer, index) {
+    imageryLayers.raise(layer);
+    viewModel.upLayer = layer;
+    viewModel.downLayer = viewModel.layers[Math.max(0, index - 1)];
+    updateLayerList();
+    window.setTimeout(function () {
+      viewModel.upLayer = viewModel.downLayer = null;
+    }, 10);
+  },
+  lower: function (layer, index) {
+    imageryLayers.lower(layer);
+    viewModel.upLayer =
+      viewModel.layers[
+        Math.min(viewModel.layers.length - 1, index + 1)
+      ];
+    viewModel.downLayer = layer;
+    updateLayerList();
+    window.setTimeout(function () {
+      viewModel.upLayer = viewModel.downLayer = null;
+    }, 10);
+  },
+  canRaise: function (layerIndex) {
+    return layerIndex > 0;
+  },
+  canLower: function (layerIndex) {
+    return layerIndex >= 0 && layerIndex < imageryLayers.length - 1;
+  },
+};
+var baseLayers = viewModel.baseLayers;
+
+Cesium.knockout.track(viewModel);
+
+function setupLayers() {
+  // Create all the base layers that this example will support.
+  // These base layers aren't really special.  It's possible to have multiple of them
+  // enabled at once, just like the other layers, but it doesn't make much sense because
+  // all of these layers cover the entire globe and are opaque.
+  addBaseLayerOption("Bing Maps Aerial", undefined); // the current base layer
+  addBaseLayerOption(
+    "Bing Maps Road",
+    Cesium.createWorldImagery({
+      style: Cesium.IonWorldImageryStyle.ROAD,
+    })
+  );
+  addBaseLayerOption(
+    "ArcGIS World Street Maps",
+    new Cesium.ArcGisMapServerImageryProvider({
+      url:
+        "https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer",
+    })
+  );
+  
+  addBaseLayerOption(
+    "Stamen Maps",
+    new Cesium.OpenStreetMapImageryProvider({
+      url: "https://stamen-tiles.a.ssl.fastly.net/watercolor/",
+      fileExtension: "jpg",
+      credit:
+        "Map tiles by Stamen Design, under CC BY 3.0. Data by OpenStreetMap, under CC BY SA.",
+    })
+  );
+  addBaseLayerOption(
+    "Natural Earth II (local)",
+    new Cesium.TileMapServiceImageryProvider({
+      url: Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII"),
+    })
+  );
+
+  addBaseLayerOption(
+    "USGS Shaded Relief (via WMTS)",
+    new Cesium.WebMapTileServiceImageryProvider({
+      url:
+        "https://basemap.nationalmap.gov/arcgis/rest/services/USGSShadedReliefOnly/MapServer/WMTS",
+      layer: "USGSShadedReliefOnly",
+      style: "default",
+      format: "image/jpeg",
+      tileMatrixSetID: "default028mm",
+      maximumLevel: 19,
+      credit: "U. S. Geological Survey",
+    })
+  );
+
+  // Create the additional layers
+addAdditionalLayerOption(
+    "OpenStreetMaps (OSM)",
+    new Cesium.OpenStreetMapImageryProvider(),
+    1.0,
+    false
+  );
+
+addAdditionalLayerOption(
+    "OpenTopoMap (OTM)",
+    new Cesium.OpenStreetMapImageryProvider({
+      url : 'https://opentopomap.org/'
+    }),
+    0.5,
+    false
+  );
+
+  addAdditionalLayerOption(
+    "Sentinel 2 (ION)",
+    new Cesium.IonImageryProvider({ assetId: 3954 }),
+    1.0,
+    false
+  );
+
+  addAdditionalLayerOption(
+    "Sentinel 2 2017 (EOX)",
+    new Cesium.WebMapServiceImageryProvider({
+        url : 'https://tiles.maps.eox.at/wms',
+        layers : 's2cloudless-2017',
+        format: 'image/png'
+    }),
+    1.0,
+    false
+  );
+
+  addAdditionalLayerOption(
+    "Sentinel 2 2018 (EOX)",
+    new Cesium.WebMapServiceImageryProvider({
+        url : 'https://tiles.maps.eox.at/wms',
+        layers : 's2cloudless-2018',
+        format: 'image/png'
+    }),
+    1.0,
+    false
+  );
+
+
+  addAdditionalLayerOption(
+    "Sentinel 2 2019 (EOX)",
+    new Cesium.WebMapServiceImageryProvider({
+        url : 'https://tiles.maps.eox.at/wms',
+        layers : 's2cloudless-2019',
+        format: 'image/png'
+    }),
+    1.0,
+    false
+  );
+
+  addAdditionalLayerOption(
+    "Sentinel 2 2020 (EOX)",
+    new Cesium.WebMapServiceImageryProvider({
+        url : 'https://tiles.maps.eox.at/wms',
+        layers : 's2cloudless-2020',
+        format: 'image/png'
+    }),
+    1.0
+  );
+
+  addAdditionalLayerOption(
+    "GeoTiff WMS (SH)",
+    new Cesium.WebMapServiceImageryProvider({
+        url : 'http://51.210.249.119:8080/geoserver/dsm/wms',
+        layers : 'africa_cog',
+        format: 'image/png'
+    }),
+    1.0,
+    false
+  );
+
+  addAdditionalLayerOption(
+    "OpenStreetMap Africa (SH)",
+    new Cesium.OpenStreetMapImageryProvider({
+      url : 'http://51.91.143.233:8080/tile/'
+    }),
+    0.5,
+    false
+  );
+
+  addAdditionalLayerOption(
+    "OpenStreetMap Alpha (SH)",
+    new Cesium.OpenStreetMapImageryProvider({
+      url : 'http://51.91.143.233/tile/'
+    }),
+    0.8
+  );
+
+  addAdditionalLayerOption(
+    "Grid",
+    new Cesium.GridImageryProvider(),
+    1.0,
+    false
+  );
+  addAdditionalLayerOption(
+    "Tile Coordinates",
+    new Cesium.TileCoordinatesImageryProvider(),
+    1.0,
+    false
+  );
+}
+
+function addBaseLayerOption(name, imageryProvider) {
+  var layer;
+  if (typeof imageryProvider === "undefined") {
+    layer = imageryLayers.get(0);
+    viewModel.selectedLayer = layer;
+  } else {
+    layer = new Cesium.ImageryLayer(imageryProvider);
+  }
+
+  layer.name = name;
+  baseLayers.push(layer);
+}
+
+function addAdditionalLayerOption(name, imageryProvider, alpha, show) {
+  var layer = imageryLayers.addImageryProvider(imageryProvider);
+  layer.alpha = Cesium.defaultValue(alpha, 0.5);
+  layer.show = Cesium.defaultValue(show, true);
+  layer.name = name;
+  Cesium.knockout.track(layer, ["alpha", "show", "name"]);
+}
+
+function updateLayerList() {
+  var numLayers = imageryLayers.length;
+  viewModel.layers.splice(0, viewModel.layers.length);
+  for (var i = numLayers - 1; i >= 0; --i) {
+    viewModel.layers.push(imageryLayers.get(i));
+  }
+}
+
+setupLayers();
+updateLayerList();
+
+//Bind the viewModel to the DOM elements of the UI that call for it.
+var toolbar = document.getElementById("toolbar");
+Cesium.knockout.applyBindings(viewModel, toolbar);
+
+Cesium.knockout
+  .getObservable(viewModel, "selectedLayer")
+  .subscribe(function (baseLayer) {
+    // Handle changes to the drop-down base layer selector.
+    var activeLayerIndex = 0;
+    var numLayers = viewModel.layers.length;
+    for (var i = 0; i < numLayers; ++i) {
+      if (viewModel.isSelectableLayer(viewModel.layers[i])) {
+        activeLayerIndex = i;
+        break;
+      }
+    }
+    var activeLayer = viewModel.layers[activeLayerIndex];
+    var show = activeLayer.show;
+    var alpha = activeLayer.alpha;
+    imageryLayers.remove(activeLayer, false);
+    imageryLayers.add(baseLayer, numLayers - activeLayerIndex - 1);
+    baseLayer.show = show;
+    baseLayer.alpha = alpha;
+    updateLayerList();
+  });
+
+//const toolbar = document.querySelector("div.toolbar");
+//const table = document.querySelector("div.toolbar.table");
+function selTer() {
+    var ceckBox = document.getElementById("selTer");
+    var ceckBoxAfr = document.getElementById("selTerAfr");
+    if (ceckBox.checked == true) {
+        viewer.scene.terrainProvider = dsmTerrainProvider;
+    } else if (ceckBoxAfr.checked == true) {
+        viewer.scene.terrainProvider = dsmAfrTerrainProvider;
+    } else {
+        viewer.scene.terrainProvider = ellipsoidTerrainProvider;
+    }
+
+    //updateTileset(tileset.root);
+};
+
+function hide_controls() {
+    var c_table = document.getElementById("controls");
+    var c_table2 = document.getElementById("controls2");
+    var btn = document.getElementById("button");
+    c_table.style.display = (c_table.style.display == "table") ? "none" : "table";
+    c_table2.style.display = c_table.style.display;
+    btn.innerHTML = (c_table.style.display == "table") ? "Hide" : "Show";
+}
+
+var tileset = Cesium.createOsmBuildings();
+
+function selBui() {
+    var ceckBox = document.getElementById("selBui");
+    if (ceckBox.checked == true) {
+        tileset = Cesium.createOsmBuildings();
+        //var heightCtrl = document.getElementById("heightCtrl");
+        //var height = heightCtrl.value;
+        setModelMatrix(viewModel.height);
+        viewer.scene.primitives.add(tileset);
+    } else {
+        viewer.scene.primitives.remove(tileset);
+    }
+
+    //updateTileset(tileset.root);
+};
+
+
+Cesium.knockout
+  .getObservable(viewModel, "height")
+  .subscribe(function (height) {
+    height = Number(height);
+    if (isNaN(height)) {
+      return;
+    }
+    setModelMatrix(height)
+   });
+
+function setModelMatrix(height) {
+
+    //var cartographic = Cesium.Cartographic.fromCartesian(
+    //  Cesium.Cartesian3.fromDegrees(-5.6858121728, 35.5483584053, 750)
+    //);
+    var ellipsoid = viewer.scene.globe.ellipsoid;
+    var camera = viewer.scene.camera;
+    var c_position = camera.position;
+    var c_direction = camera.direction;
+    var c_up = camera.up;
+    var cartographic = ellipsoid.cartesianToCartographic(c_position);
+
+    var surface = Cesium.Cartesian3.fromRadians(
+      cartographic.longitude,
+      cartographic.latitude,
+      0.0
+    );
+    var offset = Cesium.Cartesian3.fromRadians(
+      cartographic.longitude,
+      cartographic.latitude,
+      height
+    );
+    var translation = Cesium.Cartesian3.subtract(
+      offset,
+      surface,
+      new Cesium.Cartesian3()
+    );
+    tileset.modelMatrix = Cesium.Matrix4.fromTranslation(translation);
+  }
+
+//click
+viewer.scene.canvas.addEventListener('click', function(e) {
+    var mousePosition = new Cesium.Cartesian2(e.clientX, e.clientY);
+    var ellipsoid = viewer.scene.globe.ellipsoid;
+    var cartesian = viewer.camera.pickEllipsoid(mousePosition, ellipsoid);
+    if (cartesian) {
+        var cartographic = ellipsoid.cartesianToCartographic(cartesian);
+        var longitudeString = Cesium.Math.toDegrees(cartographic.longitude).toFixed(10);
+        var latitudeString = Cesium.Math.toDegrees(cartographic.latitude).toFixed(10);
+        //alert(longitudeString + ', ' + latitudeString);
+        viewModel.coords = longitudeString + ', ' + latitudeString
+    } else {
+        viewModel.coords = 'Globe was not picked';
+    }
+    var camera = viewer.scene.camera;
+    var c_position = camera.position;
+    var c_direction = camera.direction;
+    var c_up = camera.up;
+    //var cartographic = ellipsoid.cartesianToCartographic(c_position);
+    viewModel.camera = c_position + ';' + c_direction + ';' + c_up;
+    
+}, false);
+
+const input = document.getElementById('camera_coords');
+input.addEventListener('change', (event) => {
+  var res = event.target.value.split(";");
+  var strPos = res[0].replace('(','').replace(')','').split(",");
+  var strDir = res[1].replace('(','').replace(')','').split(",");
+  var strUp = res[2].replace('(','').replace(')','').split(",");
+  var camera = viewer.scene.camera;
+  camera.position = new Cesium.Cartesian3(parseFloat(strPos[0]), parseFloat(strPos[1]), parseFloat(strPos[2]));
+  camera.direction = new Cesium.Cartesian3(parseFloat(strDir[0]), parseFloat(strDir[1]), parseFloat(strDir[2]));
+  camera.up = new  Cesium.Cartesian3(parseFloat(strUp[0]), parseFloat(strUp[1]), parseFloat(strUp[2]));
+  //alert(`You like ${event.target.value}`);
+});
+
     </script>
   </body>
 </html>
